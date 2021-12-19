@@ -5,23 +5,35 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
-func LogAndExit(msg string) {
-	msg = "[Error Log] " + msg
-	fmt.Println(msg)
-	os.Exit(0)
+func LogError(w http.ResponseWriter, err error) {
+	fmt.Println("[Error Log] " + err.Error())
+	SendErrorResponse(w, err)
 }
 
-func SendJsonResponse(w http.ResponseWriter, message string, data interface{}) {
+func sendResponse(w http.ResponseWriter, message string, data interface{}, code int) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(JsonHTTPResponse{
 		Message: message,
 		Data:    data,
 	})
+}
+
+func SendSuccessResponse(w http.ResponseWriter, message string, data interface{}) {
+	sendResponse(w, message, data, http.StatusOK)
+}
+
+func SendErrorResponse(w http.ResponseWriter, err error) {
+	code := http.StatusInternalServerError
+	switch err {
+	case ErrReqQueryInvalid:
+		code = http.StatusBadRequest
+	}
+
+	sendResponse(w, err.Error(), nil, code)
 }
 
 func RequestLogger(targetMux http.Handler) http.Handler {
